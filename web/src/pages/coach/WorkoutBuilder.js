@@ -1,201 +1,293 @@
 import { useState } from "react";
 import API from "../../services/api";
-import {
-  DndContext,
-  closestCenter
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-  arrayMove
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-
-function Item({ id, content }) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id });
-
-  return (
-    <div
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      style={{
-        padding: 10,
-        marginBottom: 10,
-        background: "white",
-        borderRadius: 8,
-        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-        transform: CSS.Transform.toString(transform),
-        transition,
-        cursor: "grab"
-      }}
-    >
-      {content}
-    </div>
-  );
-}
-
-function Column({ id, items, addItem }) {
-  const [input, setInput] = useState("");
-
-  return (
-    <div style={styles.column}>
-      <h3 style={styles.columnTitle}>{id.toUpperCase()}</h3>
-
-      <SortableContext
-        items={items.map((i) => i.id)}
-        strategy={verticalListSortingStrategy}
-      >
-        {items.map((item) => (
-          <Item key={item.id} id={item.id} content={item.content} />
-        ))}
-      </SortableContext>
-
-      <input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="Add set..."
-        style={styles.input}
-      />
-
-      <button
-        style={styles.addBtn}
-        onClick={() => {
-          if (!input.trim()) return;
-          addItem(id, input);
-          setInput("");
-        }}
-      >
-        Add
-      </button>
-    </div>
-  );
-}
 
 export default function WorkoutBuilder() {
   const [name, setName] = useState("");
+  const [category, setCategory] = useState("Sprint");
+  const [level, setLevel] = useState("Beginner");
 
-  const [sections, setSections] = useState({
-    warmup: [],
-    main: [],
-    cooldown: []
-  });
+  const [warmup, setWarmup] = useState([]);
+  const [mainSet, setMainSet] = useState([]);
+  const [cooldown, setCooldown] = useState([]);
 
-  const findSection = (id) =>
-    Object.keys(sections).find((key) =>
-      sections[key].some((i) => i.id === id)
+  const addSet = (setter) => {
+    setter((prev) => [
+      ...prev,
+      {
+        description: "",
+        distance: "",
+      },
+    ]);
+  };
+
+  const updateSet = (
+    setter,
+    index,
+    field,
+    value
+  ) => {
+    setter((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? { ...item, [field]: value }
+          : item
+      )
+    );
+  };
+
+  const removeSet = (setter, index) => {
+    setter((prev) =>
+      prev.filter((_, i) => i !== index)
+    );
+  };
+
+  const calculateDistance = (sets) =>
+    sets.reduce(
+      (sum, item) =>
+        sum + Number(item.distance || 0),
+      0
     );
 
-  const handleDragEnd = ({ active, over }) => {
-    if (!over) return;
+  const warmupDistance =
+    calculateDistance(warmup);
 
-    const source = findSection(active.id);
-    const dest = findSection(over.id);
+  const mainDistance =
+    calculateDistance(mainSet);
 
-    if (!source || !dest) return;
+  const cooldownDistance =
+    calculateDistance(cooldown);
 
-    if (source === dest) {
-      const items = sections[source];
-      const oldIndex = items.findIndex(i => i.id === active.id);
-      const newIndex = items.findIndex(i => i.id === over.id);
-
-      setSections({
-        ...sections,
-        [source]: arrayMove(items, oldIndex, newIndex)
-      });
-    } else {
-      const sourceItems = [...sections[source]];
-      const destItems = [...sections[dest]];
-
-      const item = sourceItems.find(i => i.id === active.id);
-
-      sourceItems.splice(sourceItems.indexOf(item), 1);
-      destItems.splice(destItems.findIndex(i => i.id === over.id), 0, item);
-
-      setSections({
-        ...sections,
-        [source]: sourceItems,
-        [dest]: destItems
-      });
-    }
-  };
-
-  const addItem = (section, text) => {
-    setSections({
-      ...sections,
-      [section]: [
-        ...sections[section],
-        { id: Date.now().toString(), content: text }
-      ]
-    });
-  };
+  const totalDistance =
+    warmupDistance +
+    mainDistance +
+    cooldownDistance;
 
   const saveWorkout = async () => {
     try {
       if (!name.trim()) {
-        return alert("Please enter workout name");
+        return alert(
+          "Please enter workout name"
+        );
       }
-
-      const format = (arr) =>
-        arr.map((i) => ({
-          description: i.content,
-          distance: 0
-        }));
 
       const payload = {
         name,
-        category: "custom",
-        level: "coach",
-        warmup: format(sections.warmup),
-        mainSet: format(sections.main),
-        cooldown: format(sections.cooldown)
+        category,
+        level,
+
+        warmup: warmup.map((s) => ({
+          description: s.description,
+          distance: Number(s.distance),
+        })),
+
+        mainSet: mainSet.map((s) => ({
+          description: s.description,
+          distance: Number(s.distance),
+        })),
+
+        cooldown: cooldown.map((s) => ({
+          description: s.description,
+          distance: Number(s.distance),
+        })),
       };
 
-      await API.post("/training-sets", payload);
+      await API.post(
+        "/training-sets",
+        payload
+      );
 
-      alert("Workout Saved ");
+      alert(
+        "Workout created successfully"
+      );
 
       setName("");
-      setSections({
-        warmup: [],
-        main: [],
-        cooldown: []
-      });
+      setCategory("Sprint");
+      setLevel("Beginner");
+
+      setWarmup([]);
+      setMainSet([]);
+      setCooldown([]);
 
     } catch (err) {
       console.log(err);
-      alert("Error saving workout ");
+      alert("Error saving workout");
     }
   };
 
+  const renderSection = (
+    title,
+    data,
+    setter
+  ) => (
+    <div style={styles.section}>
+      <div style={styles.sectionHeader}>
+        <h3>{title}</h3>
+
+        <button
+          style={styles.addBtn}
+          onClick={() =>
+            addSet(setter)
+          }
+        >
+          + Add Set
+        </button>
+      </div>
+
+      {data.map((item, index) => (
+        <div
+          key={index}
+          style={styles.setRow}
+        >
+          <input
+            placeholder="Description"
+            value={item.description}
+            onChange={(e) =>
+              updateSet(
+                setter,
+                index,
+                "description",
+                e.target.value
+              )
+            }
+            style={styles.input}
+          />
+
+          <input
+            type="number"
+            placeholder="Distance"
+            value={item.distance}
+            onChange={(e) =>
+              updateSet(
+                setter,
+                index,
+                "distance",
+                e.target.value
+              )
+            }
+            style={styles.distanceInput}
+          />
+
+          <button
+            style={styles.deleteBtn}
+            onClick={() =>
+              removeSet(
+                setter,
+                index
+              )
+            }
+          >
+            Delete
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div style={styles.container}>
-      <h2>Workout Builder</h2>
+      <h1>Workout Builder</h1>
 
-      {}
-      <input
-        placeholder="Workout Name (e.g. Sprint Builder)"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        style={styles.nameInput}
-      />
+      <div style={styles.card}>
+        <input
+          placeholder="Workout Name"
+          value={name}
+          onChange={(e) =>
+            setName(e.target.value)
+          }
+          style={styles.nameInput}
+        />
 
-      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div style={styles.row}>
-          {["warmup", "main", "cooldown"].map((sec) => (
-            <Column
-              key={sec}
-              id={sec}
-              items={sections[sec]}
-              addItem={addItem}
-            />
-          ))}
-        </div>
-      </DndContext>
+          <select
+            value={category}
+            onChange={(e) =>
+              setCategory(
+                e.target.value
+              )
+            }
+            style={styles.select}
+          >
+            <option>Sprint</option>
+            <option>Aerobic</option>
+            <option>Endurance</option>
+            <option>Technique</option>
+            <option>Recovery</option>
+            <option>Race Pace</option>
+          </select>
 
-      <button style={styles.saveBtn} onClick={saveWorkout}>
+          <select
+            value={level}
+            onChange={(e) =>
+              setLevel(
+                e.target.value
+              )
+            }
+            style={styles.select}
+          >
+            <option>Beginner</option>
+            <option>Intermediate</option>
+            <option>Advanced</option>
+          </select>
+        </div>
+      </div>
+
+      {renderSection(
+        "Warmup",
+        warmup,
+        setWarmup
+      )}
+
+      {renderSection(
+        "Main Set",
+        mainSet,
+        setMainSet
+      )}
+
+      {renderSection(
+        "Cooldown",
+        cooldown,
+        setCooldown
+      )}
+
+      <div style={styles.summary}>
+        <h2>Workout Summary</h2>
+
+        <p>
+          Warmup Distance:
+          <strong>
+            {" "}
+            {warmupDistance}m
+          </strong>
+        </p>
+
+        <p>
+          Main Set Distance:
+          <strong>
+            {" "}
+            {mainDistance}m
+          </strong>
+        </p>
+
+        <p>
+          Cooldown Distance:
+          <strong>
+            {" "}
+            {cooldownDistance}m
+          </strong>
+        </p>
+
+        <hr />
+
+        <h2>
+          Total Distance:
+          {totalDistance}m
+        </h2>
+      </div>
+
+      <button
+        style={styles.saveBtn}
+        onClick={saveWorkout}
+      >
         Save Workout
       </button>
     </div>
@@ -204,58 +296,108 @@ export default function WorkoutBuilder() {
 
 const styles = {
   container: {
-    padding: 20
+    padding: 20,
+  },
+
+  card: {
+    background: "#fff",
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+    boxShadow:
+      "0 2px 8px rgba(0,0,0,0.1)",
   },
 
   nameInput: {
-    padding: 10,
-    width: "300px",
-    marginBottom: 20,
-    borderRadius: 6,
-    border: "1px solid #ccc"
+    width: "100%",
+    padding: 12,
+    marginBottom: 15,
+    borderRadius: 8,
+    border: "1px solid #ddd",
   },
 
   row: {
     display: "flex",
-    gap: 20
+    gap: 15,
   },
 
-  column: {
-    flex: 1,
-    background: "#f8fafc",
-    padding: 15,
-    borderRadius: 10
+  select: {
+    padding: 10,
+    borderRadius: 8,
+    border: "1px solid #ddd",
   },
 
-  columnTitle: {
-    marginBottom: 10
+  section: {
+    background: "#fff",
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+    boxShadow:
+      "0 2px 8px rgba(0,0,0,0.1)",
+  },
+
+  sectionHeader: {
+    display: "flex",
+    justifyContent:
+      "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+
+  setRow: {
+    display: "flex",
+    gap: 10,
+    marginBottom: 10,
   },
 
   input: {
-    width: "100%",
-    padding: 8,
-    marginTop: 10,
-    borderRadius: 6,
-    border: "1px solid #ccc"
+    flex: 1,
+    padding: 10,
+    borderRadius: 8,
+    border: "1px solid #ddd",
+  },
+
+  distanceInput: {
+    width: 120,
+    padding: 10,
+    borderRadius: 8,
+    border: "1px solid #ddd",
   },
 
   addBtn: {
-    marginTop: 10,
-    padding: "6px 10px",
-    background: "#3b82f6",
-    color: "white",
+    background: "#2563eb",
+    color: "#fff",
     border: "none",
-    borderRadius: 6,
-    cursor: "pointer"
+    padding: "8px 14px",
+    borderRadius: 8,
+    cursor: "pointer",
+  },
+
+  deleteBtn: {
+    background: "#ef4444",
+    color: "#fff",
+    border: "none",
+    padding: "8px 12px",
+    borderRadius: 8,
+    cursor: "pointer",
+  },
+
+  summary: {
+    background: "#fff",
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+    boxShadow:
+      "0 2px 8px rgba(0,0,0,0.1)",
   },
 
   saveBtn: {
-    marginTop: 20,
-    padding: "10px 20px",
     background: "#10b981",
-    color: "white",
+    color: "#fff",
     border: "none",
-    borderRadius: 8,
-    cursor: "pointer"
-  }
+    padding: "14px 24px",
+    borderRadius: 10,
+    fontSize: 16,
+    cursor: "pointer",
+  },
 };

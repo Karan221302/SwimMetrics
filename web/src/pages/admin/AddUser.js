@@ -13,15 +13,41 @@ export default function AddUser() {
   });
 
   const submit = async () => {
+
+    if (
+      !data.name ||
+      !data.email ||
+      !data.password
+    ) {
+      return alert(
+        "All fields required"
+      );
+    }
+  
+    if (
+      data.password.length < 6
+    ) {
+      return alert(
+        "Password must be at least 6 characters"
+      );
+    }
+  
     try {
       await API.post("/users", data);
-      alert("User created successfully");
-
-      navigate("/users"); // redirect after create
-
+  
+      alert(
+        "User created successfully"
+      );
+  
+      navigate("/users");
+  
     } catch (err) {
       console.log(err);
-      alert(err.response?.data || "Error creating user");
+  
+      alert(
+        err.response?.data ||
+        "Error creating user"
+      );
     }
   };
 

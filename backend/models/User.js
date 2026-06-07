@@ -10,9 +10,15 @@ const userSchema = new mongoose.Schema({
     enum: ["admin", "coach", "swimmer"],
     default: "swimmer"
   },
+  assignedCoach: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null
+  },
   createdAt: { type: Date, default: Date.now },
   resetPasswordToken: String,
   resetPasswordExpire: Date
 });
+
 
 module.exports = mongoose.model("User", userSchema);

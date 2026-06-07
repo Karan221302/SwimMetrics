@@ -1,108 +1,237 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import API from "../../services/api";
+
 import {
+  ResponsiveContainer,
   LineChart,
   Line,
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
   BarChart,
-  Bar
+  Bar,
 } from "recharts";
 
 export default function SwimmerAnalytics() {
   const { userId } = useParams();
-  const [data, setData] = useState(null);
+
+  const [analytics, setAnalytics] = useState(null);
 
   useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        const res = await API.get(`/training/analytics/${userId}`);
-        setData(res.data);
-      } catch (err) {
-        console.log(err);
-      }
-    };
-
     fetchAnalytics();
+    // eslint-disable-next-line
   }, [userId]);
 
-  if (!data) return <p>Loading...</p>;
+  const fetchAnalytics = async () => {
+    try {
+      const res = await API.get(
+        `/performance/analytics/${userId}`
+      );
 
-  const strokeData = Object.keys(data.strokeStats).map((key) => ({
-    stroke: key,
-    distance: data.strokeStats[key]
+      setAnalytics(res.data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const formatTime = (totalSeconds) => {
+    if (!totalSeconds) return "--";
+
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = (totalSeconds % 60).toFixed(2);
+
+    return `${mins}:${secs.padStart(5, "0")}`;
+  };
+
+  if (!analytics) {
+    return <p>Loading...</p>;
+  }
+
+  const records = analytics.records || [];
+
+  const chartData = records.map((r, index) => ({
+    attempt: index + 1,
+    time: r.totalSeconds,
+    stroke: r.stroke,
   }));
+
+  const strokeMap = {};
+
+  records.forEach((r) => {
+    if (!strokeMap[r.stroke]) {
+      strokeMap[r.stroke] = 0;
+    }
+
+    strokeMap[r.stroke]++;
+  });
+
+  const strokeData = Object.keys(strokeMap).map(
+    (stroke) => ({
+      stroke,
+      count: strokeMap[stroke],
+    })
+  );
+
+  const favoriteStroke =
+    strokeData.length > 0
+      ? strokeData.reduce((a, b) =>
+          a.count > b.count ? a : b
+        ).stroke
+      : "N/A";
 
   return (
     <div style={{ padding: 20 }}>
-      <h2>Swimmer Analytics</h2>
+      <div style={styles.header}>
+        <h1>
+          {analytics.swimmer?.name ||
+            "Swimmer Analytics"}
+        </h1>
 
-      {}
-      <div style={styles.grid}>
-        <Card title="Total Distance" value={data.totalDistance + " m"} />
-        <Card title="Best Time" value={data.bestTime} />
+        <p style={styles.email}>
+          {analytics.swimmer?.email}
+        </p>
       </div>
 
-      {}
+      <div style={styles.cards}>
+        <div style={styles.card}>
+          <h2>{analytics.totalDistance}m</h2>
+          <p>Total Distance</p>
+        </div>
+
+        <div style={styles.card}>
+          <h2>
+            {formatTime(
+              analytics.bestTime
+            )}
+          </h2>
+          <p>Best Time</p>
+        </div>
+
+        <div style={styles.card}>
+          <h2>{records.length}</h2>
+          <p>Performance Records</p>
+        </div>
+
+        <div style={styles.card}>
+          <h2>{favoriteStroke}</h2>
+          <p>Favorite Stroke</p>
+        </div>
+      </div>
+
       <div style={styles.chartBox}>
         <h3>Performance Trend</h3>
 
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={data.logs}>
-            <XAxis dataKey="date" />
+        <ResponsiveContainer
+          width="100%"
+          height={320}
+        >
+          <LineChart data={chartData}>
+            <XAxis dataKey="attempt" />
             <YAxis />
             <Tooltip />
-            <Line dataKey="time" />
+            <Line
+              type="monotone"
+              dataKey="time"
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
-      {}
       <div style={styles.chartBox}>
-        <h3>Stroke Analysis</h3>
+        <h3>Stroke Distribution</h3>
 
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer
+          width="100%"
+          height={320}
+        >
           <BarChart data={strokeData}>
             <XAxis dataKey="stroke" />
             <YAxis />
             <Tooltip />
-            <Bar dataKey="distance" />
+            <Bar dataKey="count" />
           </BarChart>
         </ResponsiveContainer>
       </div>
-    </div>
-  );
-}
 
-function Card({ title, value }) {
-  return (
-    <div style={styles.card}>
-      <h3>{title}</h3>
-      <h2>{value}</h2>
+      <div style={styles.chartBox}>
+        <h3>Performance Records</h3>
+
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Stroke</th>
+              <th>Distance</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {records.map((record) => (
+              <tr key={record._id}>
+                <td>
+                  {new Date(
+                    record.createdAt
+                  ).toLocaleDateString()}
+                </td>
+
+                <td>{record.stroke}</td>
+
+                <td>
+                  {record.distance}m
+                </td>
+
+                <td>
+                  {formatTime(
+                    record.totalSeconds
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
 const styles = {
-  grid: {
+  header: {
+    marginBottom: 20,
+  },
+
+  email: {
+    color: "#64748b",
+  },
+
+  cards: {
     display: "flex",
     gap: 20,
-    marginBottom: 20
+    flexWrap: "wrap",
+    marginBottom: 20,
   },
+
   card: {
-    flex: 1,
     background: "white",
     padding: 20,
-    borderRadius: 10,
-    boxShadow: "0 4px 10px rgba(0,0,0,0.1)"
+    borderRadius: 12,
+    minWidth: 220,
+    boxShadow:
+      "0 2px 8px rgba(0,0,0,0.1)",
   },
+
   chartBox: {
     background: "white",
     padding: 20,
-    borderRadius: 10,
-    marginTop: 20
-  }
+    borderRadius: 12,
+    marginBottom: 20,
+    boxShadow:
+      "0 2px 8px rgba(0,0,0,0.1)",
+  },
+
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
 };

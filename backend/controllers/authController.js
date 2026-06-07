@@ -19,9 +19,17 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  const email = req.body.email?.trim().toLowerCase();
+  const password = req.body.password;
 
-  const user = await User.findOne({ email });
+  console.log("BODY =", req.body);
+  console.log("EMAIL RECEIVED =", JSON.stringify(email));
+
+  const user = await User.findOne({
+    email: { $regex: new RegExp(`^${email}$`, "i") }
+  });
+
+  console.log("FOUND USER =", user);
 
   if (!user) return res.status(400).json("User not found");
 
@@ -30,11 +38,11 @@ exports.login = async (req, res) => {
   if (!isMatch) return res.status(400).json("Invalid credentials");
 
   const token = jwt.sign(
-    { id: user._id, role: user.role }, 
+    { id: user._id, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
-  
+
   res.json({ token, role: user.role });
 };
 exports.forgotPassword = async (req, res) => {

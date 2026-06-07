@@ -15,6 +15,10 @@ import SwimmerAnalytics from "./pages/coach/SwimmerAnalytics";
 import WorkoutBuilder from "./pages/coach/WorkoutBuilder";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Reports from "./pages/coach/Reports";
+import Assignments from "./pages/coach/Assignments";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import CoachAssignment from "./pages/admin/CoachAssignment";  
 
 function App() {
   return (
@@ -30,16 +34,7 @@ function App() {
         path="/reset-password/:token"
         element={<ResetPassword />}
         />
-        <Route
-  path="/dashboard"
-  element={
-    <ProtectedRoute>
-      <Layout>
-        <Dashboard />
-      </Layout>
-    </ProtectedRoute>
-  }
-/>
+        
 
 <Route
   path="/swimmers"
@@ -156,6 +151,69 @@ function App() {
     </ProtectedRoute>
   }
 />
+<Route
+  path="/assignments"
+  element={
+    <ProtectedRoute roles={["coach"]}>
+      <Layout>
+        <Assignments />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/assignments/:userId"
+  element={
+    <ProtectedRoute roles={["coach"]}>
+      <Layout>
+        <Assignments />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/reports"
+  element={
+    <ProtectedRoute roles={["coach"]}>
+      <Layout>
+        <Reports />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/admin/dashboard"
+  element={
+    <ProtectedRoute roles={["admin"]}>
+      <Layout>
+        <AdminDashboard />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/coach/dashboard"
+  element={
+    <ProtectedRoute roles={["coach"]}>
+      <Layout>
+        <Dashboard />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/coach-assignment"
+  element={
+    <ProtectedRoute roles={["admin"]}>
+      <Layout>
+        <CoachAssignment />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
+
   </Routes>
     </BrowserRouter>
   );

@@ -53,6 +53,14 @@ export default function Swimmers() {
                   >
                     View Analytics
                   </button>
+                  <button
+  style={styles.btnWarning}
+  onClick={() =>
+    navigate(`/assignments/${s._id}`)
+  }
+>
+  Assignments
+</button>
                 </div>
               </td>
             </tr>
@@ -121,5 +129,15 @@ const styles = {
     border: "none",
     borderRadius: 6,
     cursor: "pointer"
+  },
+  btnWarning: {
+    padding: "6px 12px",
+    minWidth: 120,
+    background: "#f59e0b",
+    color: "white",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer"
   }
+  
 };

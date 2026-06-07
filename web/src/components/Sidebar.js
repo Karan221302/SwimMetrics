@@ -5,7 +5,10 @@ import {
   FaUser,
   FaClipboardList,
   FaChartBar,
-  FaTools
+  FaTools,
+  FaTasks,
+  FaFileAlt,
+  FaUserTie
 } from "react-icons/fa";
 import { getRole } from "../utils/auth";
 
@@ -21,9 +24,10 @@ export default function Sidebar() {
       {}
       {role === "admin" && (
         <>
-          <MenuItem to="/dashboard" icon={<FaHome />} label="Dashboard" />
+          <MenuItem to="/admin/dashboard" icon={<FaHome />} label="Dashboard" />
           <MenuItem to="/users" icon={<FaUsers />} label="Users" />
           <MenuItem to="/add-user" icon={<FaUser />} label="Add User" />
+          <MenuItem to="/coach-assignment" icon={<FaUserTie/>} label= "Coach Assignment"/>
 
         </>
       )}
@@ -31,12 +35,15 @@ export default function Sidebar() {
       {}
       {role === "coach" && (
         <>
-          <MenuItem to="/dashboard" icon={<FaHome />} label="Dashboard" />
+          <MenuItem to="/coach/dashboard" icon={<FaHome />} label="Dashboard" />
           <MenuItem to="/swimmers" icon={<FaUser />} label="Swimmers" />
           <MenuItem to="/library" icon={<FaClipboardList />} label="Library" />
           <MenuItem to="/builder" icon={<FaTools/>} label="Workout Builder"/>
           <MenuItem to="/assign" icon={<FaClipboardList />} label="Assign" />
           <MenuItem to="/feedback" icon={<FaChartBar />} label="Feedback" />
+          <MenuItem to="/assignments" icon={<FaTasks />} label="Assignments" />
+          <MenuItem to="/reports" icon={<FaFileAlt />} label="Reports" />
+
         </>
       )}
 

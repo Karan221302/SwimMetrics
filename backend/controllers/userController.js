@@ -1,5 +1,8 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
+const Log = require("../models/Log");
+const PerformanceRecord = require("../models/PerformanceRecord");
+const AssignedWorkout = require("../models/AssignedWorkout");
 
 // 🔥 CREATE USER (ADMIN ONLY)
 exports.createUser = async (req, res) => {
@@ -54,7 +57,24 @@ exports.getUsers = async (req, res) => {
 // 🔥 GET ONLY SWIMMERS
 exports.getSwimmers = async (req, res) => {
   try {
-    const swimmers = await User.find({ role: "swimmer" }).select("-password");
+    let swimmers;
+
+    if (req.user.role === "admin") {
+      swimmers = await User.find({
+        role: "swimmer",
+      })
+        .populate(
+          "assignedCoach",
+          "name"
+        )
+        .select("-password");
+    } else {
+      swimmers = await User.find({
+        role: "swimmer",
+        assignedCoach: req.user.id,
+      }).select("-password");
+    }
+
     res.json(swimmers);
   } catch (err) {
     res.status(500).json(err.message);
@@ -117,6 +137,105 @@ exports.deleteUser = async (req, res) => {
     res.json("User deleted successfully");
 
   } catch (err) {
+    res.status(500).json(err.message);
+  }
+};
+exports.getProfileStats = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .select("-password");
+
+    const logs = await Log.find({
+      swimmer: req.user.id,
+    }).populate({
+      path: "assignment",
+      populate: {
+        path: "workoutId",
+      },
+    });
+
+    const performances =
+      await PerformanceRecord.find({
+        swimmer: req.user.id,
+      });
+
+    let totalDistance = 0;
+
+    logs.forEach((log) => {
+      const workout =
+        log.assignment?.workoutId;
+
+      if (!workout) return;
+
+      const warmup =
+        workout.warmup?.reduce(
+          (sum, s) =>
+            sum + (s.distance || 0),
+          0
+        ) || 0;
+
+      const mainSet =
+        workout.mainSet?.reduce(
+          (sum, s) =>
+            sum + (s.distance || 0),
+          0
+        ) || 0;
+
+      const cooldown =
+        workout.cooldown?.reduce(
+          (sum, s) =>
+            sum + (s.distance || 0),
+          0
+        ) || 0;
+
+      totalDistance +=
+        warmup + mainSet + cooldown;
+    });
+
+    const bestPerformance =
+      performances.length > 0
+        ? Math.min(
+            ...performances.map(
+              (p) => p.totalSeconds
+            )
+          )
+        : null;
+
+    res.json({
+      user,
+      workouts: logs.length,
+      distance: totalDistance,
+      performanceRecords:
+        performances.length,
+      bestTime: bestPerformance,
+    });
+  } catch (err) {
+    res.status(500).json(err.message);
+  }
+};
+exports.assignCoach = async (
+  req,
+  res
+) => {
+  try {
+    console.log("BODY: ", req.body);
+    const {
+      swimmerId,
+      coachId,
+    } = req.body;
+
+    const swimmer =
+      await User.findByIdAndUpdate(
+        swimmerId,
+        {
+          assignedCoach: coachId,
+        },
+        { new: true }
+      );
+
+    res.json(swimmer);
+  } catch (err) {
+    console.log("ERROR:", err);
     res.status(500).json(err.message);
   }
 };

@@ -10,6 +10,6 @@ const {
 router.post("/", verifyToken, allowRoles("swimmer"), createLog);
 router.get("/my", verifyToken, allowRoles("swimmer"), getMyLogs);
 
-router.get("/", verifyToken, allowRoles("coach"), getLogsBySwimmer);
+router.get("/", verifyToken, allowRoles("coach","admin"), getLogsBySwimmer);
 
 module.exports = router;

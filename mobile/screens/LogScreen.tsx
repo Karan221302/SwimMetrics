@@ -2,131 +2,376 @@ import { useState } from "react";
 import {
   View,
   Text,
-  Button,
   StyleSheet,
   ScrollView,
-  TextInput
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import API from "../services/api";
 import TimeInput from "../components/TimeInput";
+import { Picker } from "@react-native-picker/picker";
 
-export default function LogScreen({ route }: any) {
+export default function LogScreen({ route, navigation }: any) {
   const { assignment } = route.params;
 
   const [times, setTimes] = useState<any>({});
   const [feedback, setFeedback] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [stroke, setStroke] =
+  useState("Freestyle");
+
+const [distance, setDistance] =
+  useState(100);
+
+const [performanceTime, setPerformanceTime] =
+  useState("");
 
   const submit = async () => {
     try {
+      setLoading(true);
+
       const payload = {
         assignmentId: assignment._id,
-        mainSetLogs: Object.keys(times).map((k) => ({
-          setIndex: Number(k),
-          reps: times[k]
-        })),
-        notes: feedback
+      
+        mainSetLogs: Object.keys(times).map(
+          (k) => ({
+            setIndex: Number(k),
+            reps: times[k],
+          })
+        ),
+      
+        notes: feedback,
+      
+        performance: {
+          stroke,
+          distance,
+          time: performanceTime,
+        },
       };
 
-      console.log("PAYLOAD:", payload);
+      console.log(
+        "PAYLOAD:",
+        JSON.stringify(payload, null, 2)
+      );
 
       await API.post("/logs", payload);
 
-      alert("Saved ");
+      Alert.alert(
+        "Workout Saved",
+        "Your performance has been recorded.",
+        [
+          {
+            text: "OK",
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      );
+    } catch (err: any) {
+      console.log(err?.response?.data);
 
-    } catch (err) {
-      console.log(err);
-      alert("Error saving log");
+      Alert.alert(
+        "Error",
+        err?.response?.data?.message ||
+          "Unable to save workout."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   if (!assignment?.workoutId) {
-    return <Text>No workout data</Text>;
+    return (
+      <View style={styles.center}>
+        <Text>No workout data found</Text>
+      </View>
+    );
   }
 
+  const workout = assignment.workoutId;
+  const distanceOptions: Record<string, number[]> = {
+    Freestyle: [50, 100, 200, 400, 800, 1500],
+  
+    Backstroke: [50, 100, 200],
+  
+    Breaststroke: [50, 100, 200],
+  
+    Butterfly: [50, 100, 200],
+  
+    IM: [200, 400],
+  };
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Log Times</Text>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.headerCard}>
+        <Text style={styles.workoutName}>
+          {workout.name}
+        </Text>
 
-      {assignment.workoutId.mainSet.map((set: any, i: number) => {
-        const reps =
-          parseInt(set.description.split("x")[0]) || 1;
+        <Text style={styles.workoutMeta}>
+          {workout.category} • {workout.level}
+        </Text>
+      </View>
 
-        return (
-          <View key={i} style={styles.setContainer}>
-            <Text style={styles.setTitle}>{set.description}</Text>
+      <Text style={styles.sectionTitle}>
+        Main Set Times
+      </Text>
+      <Text style={styles.sectionTitle}>
+  Performance Entry
+</Text>
 
-            {[...Array(reps)].map((_, repIndex) => (
-              <View key={repIndex} style={styles.row}>
-                <Text style={styles.rep}>{repIndex + 1}.</Text>
+<View style={styles.setCard}>
+  <Text style={styles.repLabel}>
+    Stroke
+  </Text>
 
-                <TimeInput
-                  onChange={(formatted: any) => {
-                    const updated = { ...times };
+  <Picker
+    selectedValue={stroke}
+    onValueChange={(value) => {
+      setStroke(value);
 
-                    if (!updated[i]) updated[i] = [];
+      setDistance(
+        distanceOptions[value][0]
+      );
+    }}
+  >
+    <Picker.Item
+      label="Freestyle"
+      value="Freestyle"
+    />
 
-                    updated[i][repIndex] = formatted;
+    <Picker.Item
+      label="Backstroke"
+      value="Backstroke"
+    />
 
-                    setTimes(updated);
-                  }}
-                />
-              </View>
-            ))}
-          </View>
-        );
-      })}
+    <Picker.Item
+      label="Breaststroke"
+      value="Breaststroke"
+    />
 
-      { }
-      <Text style={styles.section}>Feedback</Text>
+    <Picker.Item
+      label="Butterfly"
+      value="Butterfly"
+    />
+
+    <Picker.Item
+      label="IM"
+      value="IM"
+    />
+  </Picker>
+
+  <Text style={styles.repLabel}>
+    Distance
+  </Text>
+
+  <Picker
+    selectedValue={distance}
+    onValueChange={setDistance}
+  >
+    {distanceOptions[stroke].map(
+      (d) => (
+        <Picker.Item
+          key={d}
+          label={`${d}m`}
+          value={d}
+        />
+      )
+    )}
+  </Picker>
+
+  <Text style={styles.repLabel}>
+    Official Time
+  </Text>
+
+  <TimeInput
+    onChange={(value:string) =>
+      setPerformanceTime(value)
+    }
+  />
+</View>
+      {workout.mainSet?.map(
+        (set: any, index: number) => {
+          const reps =
+            parseInt(
+              set.description.split("x")[0]
+            ) || 1;
+
+          return (
+            <View
+              key={index}
+              style={styles.setCard}
+            >
+              <Text style={styles.setTitle}>
+                {set.description}
+              </Text>
+
+              {[...Array(reps)].map(
+                (_, repIndex) => (
+                  <View
+                    key={repIndex}
+                    style={styles.repRow}
+                  >
+                    <Text
+                      style={styles.repLabel}
+                    >
+                      Rep {repIndex + 1}
+                    </Text>
+
+                    <TimeInput
+                      onChange={(
+                        formatted: string
+                      ) => {
+                        const updated = {
+                          ...times,
+                        };
+
+                        if (
+                          !updated[index]
+                        ) {
+                          updated[index] =
+                            [];
+                        }
+
+                        updated[index][
+                          repIndex
+                        ] = formatted;
+
+                        setTimes(updated);
+                      }}
+                    />
+                  </View>
+                )
+              )}
+            </View>
+          );
+        }
+      )}
+
+      <Text style={styles.sectionTitle}>
+        Workout Feedback
+      </Text>
 
       <TextInput
-        placeholder="How was the workout?"
         value={feedback}
         onChangeText={setFeedback}
+        placeholder="How did today's workout feel?"
         multiline
-        style={styles.feedback}
+        style={styles.feedbackBox}
       />
 
-      <Button title="Submit" onPress={submit} />
+      <TouchableOpacity
+        style={[
+          styles.submitButton,
+          loading && {
+            opacity: 0.7,
+          },
+        ]}
+        onPress={submit}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#FFF" />
+        ) : (
+          <Text
+            style={styles.submitButtonText}
+          >
+            Submit Workout
+          </Text>
+        )}
+      </TouchableOpacity>
+
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20 },
-
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 15
+  container: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+    padding: 20,
   },
 
-  setContainer: { marginBottom: 20 },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  headerCard: {
+    backgroundColor: "#2563EB",
+    borderRadius: 20,
+    padding: 25,
+    marginBottom: 25,
+  },
+
+  workoutName: {
+    color: "#FFF",
+    fontSize: 24,
+    fontWeight: "700",
+  },
+
+  workoutMeta: {
+    color: "#DBEAFE",
+    marginTop: 8,
+  },
+
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 15,
+  },
+
+  setCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 15,
+    elevation: 3,
+  },
 
   setTitle: {
+    fontWeight: "700",
+    fontSize: 16,
+    marginBottom: 15,
+    color: "#0F172A",
+  },
+
+  repRow: {
+    marginBottom: 12,
+  },
+
+  repLabel: {
+    marginBottom: 8,
+    color: "#475569",
     fontWeight: "600",
-    marginBottom: 10
   },
 
-  row: {
-    flexDirection: "row",
+  feedbackBox: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    minHeight: 120,
+    padding: 15,
+    textAlignVertical: "top",
+    marginBottom: 25,
+    elevation: 2,
+  },
+
+  submitButton: {
+    backgroundColor: "#2563EB",
+    borderRadius: 16,
+    paddingVertical: 18,
     alignItems: "center",
-    marginBottom: 10
   },
 
-  rep: { width: 25, fontSize: 16 },
-
-  section: {
-    marginTop: 20,
-    fontWeight: "600"
+  submitButtonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "700",
   },
-
-  feedback: {
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 8,
-    height: 80,
-    marginTop: 10,
-    marginBottom: 20
-  }
 });

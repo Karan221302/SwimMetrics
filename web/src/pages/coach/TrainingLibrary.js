@@ -15,6 +15,12 @@ export default function TrainingLibrary() {
   });
 
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+const [categoryFilter, setCategoryFilter] =
+  useState("All");
+
+const [levelFilter, setLevelFilter] =
+  useState("All");
 
   useEffect(() => {
     fetchData();
@@ -46,7 +52,60 @@ export default function TrainingLibrary() {
   const toggleExpand = (id) => {
     setExpanded(expanded === id ? null : id);
   };
-
+  const calculateDistance = (workout) => {
+    return [
+      ...(workout.warmup || []),
+      ...(workout.mainSet || []),
+      ...(workout.cooldown || []),
+    ].reduce(
+      (sum, item) =>
+        sum + Number(item.distance || 0),
+      0
+    );
+  };
+  
+  const deleteWorkout = async (id) => {
+    if (!window.confirm("Delete workout?"))
+      return;
+  
+    try {
+      await API.delete(
+        `/training-sets/${id}`
+      );
+  
+      setWorkouts((prev) =>
+        prev.filter(
+          (w) => w._id !== id
+        )
+      );
+  
+      alert("Workout deleted");
+    } catch (err) {
+      console.log(err);
+      alert("Delete failed");
+    }
+  };
+  
+  const duplicateWorkout = async (
+    id
+  ) => {
+    try {
+      await API.post(
+        `/training-sets/duplicate/${id}`
+      );
+  
+      fetchData();
+  
+      alert(
+        "Workout duplicated"
+      );
+    } catch (err) {
+      console.log(err);
+      alert(
+        "Duplicate failed"
+      );
+    }
+  };
   const assignWorkout = async () => {
     if (!assignData.swimmerId || !assignData.date) {
       return alert("Select swimmer and date");
@@ -73,16 +132,113 @@ export default function TrainingLibrary() {
   if (loading) {
     return <p style={{ padding: 20 }}>Loading workouts...</p>;
   }
+  const filteredWorkouts =
+  workouts.filter((w) => {
+    const matchesSearch =
+      w.name
+        .toLowerCase()
+        .includes(
+          search.toLowerCase()
+        );
+
+    const matchesCategory =
+      categoryFilter === "All" ||
+      w.category === categoryFilter;
+
+    const matchesLevel =
+      levelFilter === "All" ||
+      w.level === levelFilter;
+
+    return (
+      matchesSearch &&
+      matchesCategory &&
+      matchesLevel
+    );
+  });
 
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Training Library</h2>
+      <div style={styles.toolbar}>
+  <input
+    placeholder="Search workouts..."
+    value={search}
+    onChange={(e) =>
+      setSearch(e.target.value)
+    }
+    style={styles.search}
+  />
 
-      {workouts.length === 0 ? (
+  <select
+    value={categoryFilter}
+    onChange={(e) =>
+      setCategoryFilter(
+        e.target.value
+      )
+    }
+    style={styles.search}
+  >
+    <option>All</option>
+    <option>Sprint</option>
+    <option>Aerobic</option>
+    <option>Endurance</option>
+    <option>Technique</option>
+    <option>Recovery</option>
+    <option>Race Pace</option>
+  </select>
+
+  <select
+    value={levelFilter}
+    onChange={(e) =>
+      setLevelFilter(
+        e.target.value
+      )
+    }
+    style={styles.search}
+  >
+    <option>All</option>
+    <option>Beginner</option>
+    <option>Intermediate</option>
+    <option>Advanced</option>
+  </select>
+</div>
+<div style={styles.stats}>
+  <div style={styles.statCard}>
+    <h2>{workouts.length}</h2>
+    <p>Total Workouts</p>
+  </div>
+
+  <div style={styles.statCard}>
+    <h2>
+      {
+        workouts.filter(
+          (w) =>
+            w.category ===
+            "Sprint"
+        ).length
+      }
+    </h2>
+    <p>Sprint</p>
+  </div>
+
+  <div style={styles.statCard}>
+    <h2>
+      {
+        workouts.filter(
+          (w) =>
+            w.level ===
+            "Advanced"
+        ).length
+      }
+    </h2>
+    <p>Advanced</p>
+  </div>
+</div>
+      {filteredWorkouts.length === 0 ? (
         <p>No workouts available</p>
       ) : (
         <div style={styles.grid}>
-          {workouts.map((w) => (
+          {filteredWorkouts.map((w) => (
             <div
               key={w._id}
               style={styles.card}
@@ -100,26 +256,55 @@ export default function TrainingLibrary() {
               </div>
 
               <p style={styles.level}>Level: {w.level}</p>
-
+              <p style={styles.distance}>
+  Distance:
+  {calculateDistance(w)}m
+</p>
               {}
               <div style={styles.actions}>
-                <button
-                  style={styles.btnPrimary}
-                  onClick={() => toggleExpand(w._id)}
-                >
-                  {expanded === w._id ? "Hide" : "View"}
-                </button>
+  <button
+    style={styles.btnPrimary}
+    onClick={() =>
+      toggleExpand(w._id)
+    }
+  >
+    {expanded === w._id
+      ? "Hide"
+      : "View"}
+  </button>
 
-                <button
-                  style={styles.btnSecondary}
-                  onClick={() => {
-                    setSelectedWorkout(w);
-                    setShowModal(true);
-                  }}
-                >
-                  Assign
-                </button>
-              </div>
+  <button
+    style={styles.btnSecondary}
+    onClick={() => {
+      setSelectedWorkout(w);
+      setShowModal(true);
+    }}
+  >
+    Assign
+  </button>
+
+  <button
+    style={styles.btnDuplicate}
+    onClick={() =>
+      duplicateWorkout(
+        w._id
+      )
+    }
+  >
+    Duplicate
+  </button>
+
+  <button
+    style={styles.btnDelete}
+    onClick={() =>
+      deleteWorkout(
+        w._id
+      )
+    }
+  >
+    Delete
+  </button>
+</div>
 
               {}
               {expanded === w._id && (
@@ -304,5 +489,57 @@ const styles = {
   modalActions: {
     display: "flex",
     justifyContent: "space-between"
-  }
+  },
+  toolbar: {
+    display: "flex",
+    gap: 15,
+    marginBottom: 20,
+    flexWrap: "wrap",
+  },
+  
+  search: {
+    padding: 10,
+    borderRadius: 8,
+    border: "1px solid #ddd",
+  },
+  
+  stats: {
+    display: "flex",
+    gap: 20,
+    marginBottom: 20,
+    flexWrap: "wrap",
+  },
+  
+  statCard: {
+    background: "#fff",
+    padding: 20,
+    borderRadius: 12,
+    minWidth: 180,
+    boxShadow:
+      "0 2px 8px rgba(0,0,0,0.1)",
+  },
+  
+  distance: {
+    marginTop: 6,
+    fontWeight: "600",
+    color: "#2563eb",
+  },
+  
+  btnDuplicate: {
+    background: "#f59e0b",
+    color: "white",
+    border: "none",
+    padding: "6px 12px",
+    borderRadius: 6,
+    cursor: "pointer",
+  },
+  
+  btnDelete: {
+    background: "#ef4444",
+    color: "white",
+    border: "none",
+    padding: "6px 12px",
+    borderRadius: 6,
+    cursor: "pointer",
+  },
 };

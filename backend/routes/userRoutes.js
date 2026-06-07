@@ -6,7 +6,9 @@ const {
   getUsers,
   updateRole,
   deleteUser,
-  getSwimmers
+  getSwimmers,
+  getProfileStats,
+  assignCoach
 } = require("../controllers/userController");
 
 // 🔥 Create user (admin only)
@@ -17,11 +19,24 @@ router.get("/swimmers", verifyToken, allowRoles("coach", "admin"), getSwimmers);
 
 // 🔥 Get all users
 router.get("/", verifyToken, allowRoles("admin", "coach"), getUsers);
+router.put(
+  "/assign-coach",
+  verifyToken,
+  allowRoles("admin"),
+  assignCoach
+);
 
 // 🔥 Update role (admin only)
 router.put("/:id", verifyToken, allowRoles("admin"), updateRole);
 
 // 🔥 Delete user (admin only)
 router.delete("/:id", verifyToken, allowRoles("admin"), deleteUser);
+
+router.get(
+  "/profile",
+  verifyToken,
+  getProfileStats
+);
+
 
 module.exports = router;

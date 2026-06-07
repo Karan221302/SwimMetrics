@@ -19,5 +19,10 @@ app.use("/api/feedback", require("./routes/feedbackRoutes"));
 app.use("/api/assign", require("./routes/assignRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/logs", require("./routes/logRoutes"));
+app.use("/api/performance", require("./routes/performanceRoutes"));
+app.use("/api/reports", require("./routes/reportRoutes"));
 // Start server (ALWAYS LAST)
-app.listen(5000, () => console.log("Server running"));
+const PORT = process.env.PORT || 5000;
+    app.listen(PORT, ()=>
+    console.log('Server running on port ${PORT}')
+);

@@ -1,52 +1,95 @@
-import { useRef, useState } from "react";
-import { View, TextInput, StyleSheet, Text } from "react-native";
+import { useState } from "react";
+import {
+  View,
+  TextInput,
+  StyleSheet,
+} from "react-native";
 
 export default function TimeInput({ onChange }) {
-  const [values, setValues] = useState(["", "", "", "", "", ""]);
-  const inputs = useRef([]);
+  const [minutes, setMinutes] = useState("");
+  const [seconds, setSeconds] = useState("");
+  const [milliseconds, setMilliseconds] =
+    useState("");
 
-  const handleChange = (text, index) => {
-    if (!/^\d?$/.test(text)) return;
-
-    const newValues = [...values];
-    newValues[index] = text;
-    setValues(newValues);
-
-    if (text && index < 5) {
-      inputs.current[index + 1].focus();
-    }
-
-    if (!text && index > 0) {
-      inputs.current[index - 1].focus();
-    }
-
-    const formatted = `${newValues[0] || "_"}${newValues[1] || "_"}:${
-      newValues[2] || "_"
-    }${newValues[3] || "_"}:${newValues[4] || "_"}${
-      newValues[5] || "_"
-    }`;
+  const updateTime = (min, sec, ms) => {
+    const formatted = `${min || "00"}:${
+      sec || "00"
+    }:${ms || "00"}`;
 
     onChange(formatted);
   };
 
+  const handleMinutes = (text) => {
+    if (!/^\d*$/.test(text)) return;
+
+    const value = Number(text);
+
+    if (text !== "" && value > 59) {
+      return;
+    }
+
+    setMinutes(text);
+    updateTime(text, seconds, milliseconds);
+  };
+
+  const handleSeconds = (text) => {
+    if (!/^\d*$/.test(text)) return;
+
+    const value = Number(text);
+
+    if (text !== "" && value > 99) {
+      return;
+    }
+
+    setSeconds(text);
+    updateTime(minutes, text, milliseconds);
+  };
+
+  const handleMilliseconds = (text) => {
+    if (!/^\d*$/.test(text)) return;
+
+    const value = Number(text);
+
+    if (text !== "" && value > 99) {
+      return;
+    }
+
+    setMilliseconds(text);
+    updateTime(minutes, seconds, text);
+  };
+
   return (
     <View style={styles.container}>
-      {values.map((val, i) => (
-        <View key={i} style={styles.boxContainer}>
-          <TextInput
-            ref={(ref) => (inputs.current[i] = ref)}
-            value={val}
-            keyboardType="numeric"
-            maxLength={1}
-            onChangeText={(text) => handleChange(text, i)}
-            style={styles.box}
-          />
+      <TextInput
+        style={styles.input}
+        keyboardType="numeric"
+        placeholder="MM"
+        maxLength={2}
+        value={minutes}
+        onChangeText={handleMinutes}
+      />
 
-          {(i === 1 || i === 3) && (
-            <Text style={styles.colon}>:</Text>
-          )}
-        </View>
-      ))}
+      <View style={styles.separator} />
+
+      <TextInput
+        style={styles.input}
+        keyboardType="numeric"
+        placeholder="SS"
+        maxLength={2}
+        value={seconds}
+        onChangeText={handleSeconds}
+      />
+
+      <View style={styles.separator} />
+
+      <TextInput
+        style={styles.input}
+        keyboardType="numeric"
+        placeholder="MS"
+        maxLength={2}
+        value={milliseconds}
+        onChangeText={handleMilliseconds}
+      />
     </View>
   );
 }
@@ -54,23 +97,22 @@ export default function TimeInput({ onChange }) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    alignItems: "center"
+    alignItems: "center",
   },
-  boxContainer: {
-    flexDirection: "row",
-    alignItems: "center"
-  },
-  box: {
-    width: 35,
-    height: 45,
+
+  input: {
+    width: 60,
+    height: 50,
     borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
     textAlign: "center",
-    marginHorizontal: 2,
-    borderRadius: 6,
-    fontSize: 18
-  },
-  colon: {
+    backgroundColor: "#FFF",
     fontSize: 18,
-    marginHorizontal: 2
-  }
+    fontWeight: "600",
+  },
+
+  separator: {
+    width: 10,
+  },
 });

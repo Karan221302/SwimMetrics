@@ -1,4 +1,4 @@
-const TrainingLog = require("../models/TrainingLog");
+const TrainingLog = require("../models/Log");
 
 exports.addTraining = async (req, res) => {
   try {
