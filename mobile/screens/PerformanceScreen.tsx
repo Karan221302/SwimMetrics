@@ -292,48 +292,63 @@ export default function PerformanceScreen() {
         </Text>
 
         {trendData.length > 0 ? (
-  <LineChart
-    data={{
-      labels: trendData.map(
-        (_: any, index: number) =>
-          `${index + 1}`
-      ),
+  <View>
+    <LineChart
+      data={{
+        labels: trendData.map(
+          (item: any) =>
+            new Date(
+              item.createdAt
+            ).toLocaleDateString(
+              "en-IN",
+              {
+                day: "numeric",
+                month: "short",
+              }
+            )
+        ),
+        datasets: [
+          {
+            data: trendData.map(
+              (item: any) =>
+                item.totalSeconds
+            ),
+          },
+        ],
+      }}
+      width={screenWidth - 80}
+      height={220}
+      yAxisSuffix="s"
+      chartConfig={{
+        backgroundColor: "#fff",
+        backgroundGradientFrom: "#fff",
+        backgroundGradientTo: "#fff",
+        decimalPlaces: 2,
+        color: (opacity = 1) =>
+          `rgba(37,99,235,${opacity})`,
+        labelColor: (
+          opacity = 1
+        ) =>
+          `rgba(15,23,42,${opacity})`,
+      }}
+      bezier
+      style={{
+        marginTop: 20,
+        borderRadius: 16,
+      }}
+    />
 
-      datasets: [
-        {
-          data: trendData.map(
-            (item: any) =>
-              item.totalSeconds
-          ),
-        },
-      ],
-    }}
-    width={screenWidth - 80}
-    height={220}
-    yAxisSuffix="s"
-    chartConfig={{
-      backgroundColor: "#fff",
-      backgroundGradientFrom:
-        "#fff",
-      backgroundGradientTo:
-        "#fff",
-
-      decimalPlaces: 2,
-
-      color: (opacity = 1) =>
-        `rgba(37,99,235,${opacity})`,
-
-      labelColor: (
-        opacity = 1
-      ) =>
-        `rgba(15,23,42,${opacity})`,
-    }}
-    bezier
-    style={{
-      marginTop: 20,
-      borderRadius: 16,
-    }}
-  />
+    <Text
+      style={{
+        textAlign: "center",
+        color: "#64748B",
+        marginTop: 10,
+        fontSize: 14,
+      }}
+    >
+      Lower time = Better performance
+    </Text>
+  </View>
 ) : (
   <View
     style={
